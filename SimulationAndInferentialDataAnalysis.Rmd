@@ -230,8 +230,8 @@ Interesting - Guinea pigs that received 2mg of Vitamin C daily had nearly identi
 
 Now for some hypothesis testing. First we'll test whether or not the delivery method has a significant effect on odontoblast length. My hypothesis:
 
-* H~0~: Delivering Vitamin C to guinea pigs via Orange Juice has no significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
-* H~A~: Delivering Vitamin C to guinea pigs via Orange Juice has a significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
+* H~0~: Delivering Vitamin C to guinea pigs via orange juice has no significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
+* H~A~: Delivering Vitamin C to guinea pigs via orange juice has a significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
 
 ```{r}
 ## Test delivery methods effect on odontoblast length
