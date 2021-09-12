@@ -1,0 +1,305 @@
+---
+title: "Simulation And Inferential Data Analysis"
+author: "Kevin Roche"
+date: "02/09/2021"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    fig_height: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Synopsis
+
+The following analysis is broken into two sections:
+
+1. The first section is a simulation exercise that illustrates the central limit theorem.
+2. The second section analyzes the ToothData dataset, which contains information on the odontoblast length of 60 guinea pigs and how it varies with their daily dosage of Vitamin C and the method with which it is delivered. T-tests and multiple linear regression are used to determine the effect that daily dosage and delivery method have on odontoblast length.
+
+# Setup
+
+```{r}
+## Load packages
+library(tidyverse)
+library(ggplot2)
+```
+
+# Part One: Simulations
+
+*Instructions for part one read as follows:*
+
+In this project you will investigate the exponential distribution in R and compare it with the Central Limit Theorem. The exponential distribution can be simulated in R with rexp(n, lambda) where lambda is the rate parameter. The mean of exponential distribution is 1/lambda and the standard deviation is also 1/lambda. Set lambda = 0.2 for all of the simulations. You will investigate the distribution of averages of 40 exponentials. Note that you will need to do a thousand simulations.
+
+Illustrate via simulation and associated explanatory text the properties of the distribution of the mean of 40 exponentials. You should
+
+1. Show the sample mean and compare it to the theoretical mean of the distribution.
+2. Show how variable the sample is (via variance) and compare it to the theoretical variance of the distribution.
+3. Show that the distribution is approximately normal. Focus on the difference between the distribution of a large collection of random exponentials and the distribution of a large collection of averages of 40 exponentials.
+
+```{r}
+## Set seed so simulation is reproducible
+set.seed(248) # RIP Kobe
+
+## Set parameters
+lambda <- 0.2
+n <- 40
+sim <- 1000
+
+## Run simulation
+sim <- replicate(sim, rexp(n, lambda))
+
+## Calculate mean of simulated exponentials
+simMean <- apply(sim, 2, mean) # 2 just tells R that we want to apply the mean to each of the columns in sim
+
+## Quick plot to see the distribution
+ggplot(data.frame(y = simMean), aes(x = y)) +
+        geom_histogram(aes(y = ..count.., fill = ..count..), bins = 100) +
+        ggtitle("Distribution of 40 exponentials over 1000 simulations") +
+        labs(y = "Frequency", x = "Mean") +
+        geom_vline(xintercept = mean(simMean), size = 1, colour = "red") +
+        theme_bw()
+```
+
+The plot above shows the distribution of the 40 exponentials over 1000 simulations. The red line depicts the sample mean.
+
+## Sample Mean vs. Theoretical Mean
+
+```{r}
+## Sample mean
+mean(simMean)
+
+## Theoretical mean
+1/lambda
+
+## Add theoretical mean to plot
+ggplot(data.frame(y = simMean), aes(x = y)) +
+        geom_histogram(aes(y = ..count.., fill = ..count..), bins = 100) +
+        ggtitle("Distribution of 40 exponentials over 1000 simulations") +
+        labs(y = "Frequency", x = "Mean") +
+        geom_vline(xintercept = mean(simMean), size = 1, colour = "red") +
+        geom_vline(xintercept = 1/lambda, size = 1, colour = "green") +
+        theme_bw()
+```
+
+The plot above is a recreation of the plot of the distribution of 40 exponentials over 1000 simulations, with the addition of the theoretical mean (green line).
+
+The sample mean is ~4.985, while the theoretical mean is 5 - in other words, the two means are very close.
+
+## Sample Variance vs. Theoretical Variance
+
+```{r}
+## Calculate the sample variance
+simVariance <- var(simMean)
+simVariance
+
+## Calculate the theoretical variance
+theoreticalVariance <- ((1/lambda)^2)/n
+theoreticalVariance
+```
+
+Just as the sample and theoretical means were very close, so are the sample and theoretical variance. The sample variance is ~0.647, while the theoretical variance is 0.625 - a difference of ~0.022.
+
+## Distribution
+
+```{r}
+## Add normal distribution to plot
+ggplot(data.frame(y = simMean), aes(x = y)) +
+        geom_histogram(aes(y = ..density.., fill = ..count..), bins = 100) +
+        ggtitle("Distribution of 40 exponentials over 1000 simulations") +
+        labs(y = "Density", x = "Mean") +
+        geom_vline(xintercept = mean(simMean), size = 1, colour = "red") +
+        geom_vline(xintercept = 1/lambda, size = 1, colour = "green") +
+        stat_function(fun = dnorm, colour = "black", args = list(mean = mean(simMean), sd = sd(simMean))) +
+        theme_bw()
+```
+
+We can see from the plot that the distribution is approximately normally distributed.
+
+To illustrate the central limit theorem, let's re-run the plot with 100,000 simulations and see if the approximation is more normal than the plot above.
+
+```{r}
+## Set seed so simulation is reproducible
+set.seed(248)
+
+## Set parameters
+lambda <- 0.2
+n <- 40
+sim2 <- 100000
+
+## Run simulation
+sim2 <- replicate(sim2, rexp(n, lambda))
+
+## Calculate mean of simulated exponentials
+simMean2 <- apply(sim2, 2, mean)
+
+## Plot
+ggplot(data.frame(y = simMean2), aes(x = y)) +
+        geom_histogram(aes(y = ..density.., fill = ..count..), bins = 100) +
+        ggtitle("Distribution of 40 exponentials over 100,000 simulations") +
+        labs(y = "Density", x = "Mean") +
+        geom_vline(xintercept = mean(simMean2), size = 1, colour = "red") +
+        geom_vline(xintercept = 1/lambda, size = 1, colour = "green") +
+        stat_function(fun = dnorm, colour = "black", args = list(mean = mean(simMean2), sd = sd(simMean2))) +
+        theme_bw()
+```
+
+It is indeed - and as the number of simulations approaches infinity, the distribution of the exponentials will get closer and closer to a perfectly normal distribution.
+
+# Part Two: Inferential Data Analysis
+
+*Instructions for part two read as follows:*
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions.
+
+## Setup
+```{r}
+## Load dataset
+library(datasets)
+data(ToothGrowth)
+```
+
+*Description of the dataset from the [R Documentation](https://www.rdocumentation.org/packages/datasets/versions/3.6.2/topics/ToothGrowth):*
+
+The response is the length of odontoblasts (cells responsible for tooth growth) in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC).
+
+## Exploratory Analysis
+
+```{r}
+## Check variable type
+str(ToothGrowth)
+
+## Quick summary stats
+summary(ToothGrowth)
+```
+
+The length of the guinea pigs odontoblasts range from 4.2 microns to 33.9 microns, with a mean of 18.81 microns. We see that the dosage is considered to be a numeric variable - let's change that to a factor variable instead (because there are three levels).
+
+```{r}
+## Change dosage to factor
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+```
+
+Let's check out how the average tooth length varies by dosage.
+
+```{r}
+ToothGrowth %>% ggplot(aes(x = dose, y = len)) +
+        geom_boxplot(aes(fill = dose)) +
+        ggtitle("Average Odontoblast Length by Dosage") +
+        labs(x = "Dosage (mg/day)", y = "Length") +
+        theme_bw()
+```
+
+As expected, guinea pigs that received a higher daily dosage of Vitamin C had longer odontoblasts on average.
+
+Now, let's check out how the average tooth length varies by delivery method.
+
+```{r}
+ToothGrowth %>% ggplot(aes(x = supp, y = len)) +
+        geom_boxplot(aes(fill = supp)) +
+        ggtitle("Average Odontoblast Length by Delivery Method") +
+        labs(x = "Delivery Method", y = "Length") +
+        theme_bw()
+```
+
+Here, we can see that guinea pigs that received their daily dosage through orange juice had longer odontoblasts on average than those who received their daily dosage through ascorbic acid (coded as VC).
+
+Finally, let's take a look at how the average tooth length varies by each delivery method and dosage combination.
+
+```{r}
+ToothGrowth %>% ggplot(aes(x = dose, y = len)) +
+        geom_boxplot(aes(fill = dose)) +
+        ggtitle("Average Odontoblast Length by Dosage across Delivery Methods") +
+        facet_wrap(. ~ supp) +
+        labs(x = "Dosage (mg/day)", y = "Length") +
+        theme_bw()
+```
+
+Interesting - Guinea pigs that received 2mg of Vitamin C daily had nearly identical lengths of odontoblasts on average (regardless of delivery method), but guinea pigs that received either 0.5mg or 1mg of Vitamin C daily had longer odontoblasts on average when they received it via orange juice instead of ascorbic acid.
+
+## Hypothesis Testing
+
+Now for some hypothesis testing. First we'll test whether or not the delivery method has a significant effect on odontoblast length. My hypothesis:
+
+* H~0~: Delivering Vitamin C to guinea pigs via Orange Juice has no significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
+* H~A~: Delivering Vitamin C to guinea pigs via Orange Juice has a significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
+
+```{r}
+## Test delivery methods effect on odontoblast length
+t.test(len ~ supp, data = ToothGrowth)
+```
+
+The absolute value of the t-value is less than 1.96 and the p-value is greater than 0.05, meaning that we fail to reject the null hypothesis that delivering Vitamin C to guinea pigs via Orange Juice has no significant effect on their odontoblast length compared to delivering Vitamin C via ascorbic acid.
+
+Now, should it be noted that the p-value we've calculated is *very* close to the arbitrary (but universally used) threshold of 0.05 that we use to determine whether we reject or fail to reject the null hypothesis? Perhaps that's a discussion for another time...
+
+Next, let's test whether or not the daily dosage of Vitamin C has a significant effect on odontoblast length. My (generalized) hypothesis:
+
+* H~0~: Delivering a larger dosage of Vitamin C to guinea pigs has no significant effect on their odontoblast length compared to delivering a smaller dosage of Vitamin C.
+* H~A~: Delivering a larger dosage of Vitamin C to guinea pigs has a significant effect on their odontoblast length compared to delivering a smaller dosage of Vitamin C.
+
+```{r}
+## Test the difference in 2mg/day vitamin c and 0.5mg/day in vitamin c on odontoblast length
+t.test(ToothGrowth$len[ToothGrowth$dose==2],ToothGrowth$len[ToothGrowth$dose==0.5])
+
+## Test the difference in 2mg/day vitamin c and 1mg/day in vitamin c on odontoblast length
+t.test(ToothGrowth$len[ToothGrowth$dose==2],ToothGrowth$len[ToothGrowth$dose==1])
+
+## Test the difference in 1mg/day vitamin c and 0.5mg/day in vitamin c on odontoblast length
+t.test(ToothGrowth$len[ToothGrowth$dose==1],ToothGrowth$len[ToothGrowth$dose==0.5])
+```
+
+In all three cases, we observe that the absolute value of the t-value is greater than 1.96 and the p-value is less than 0.05 - indicating that receiving a higher dosage of Vitamin C has a significant effect on odontoblast length.
+
+## Linear Model
+
+Let's run a quick linear regression and check the results.
+
+```{r}
+## Linear regression
+odontoblastLengthModel <- lm(len ~ relevel(dose, ref = "0.5") + relevel(supp, ref = "VC"), data = ToothGrowth)
+
+## Rename coefficients
+names(odontoblastLengthModel$coefficients)<- c("Intercept", "1mg/day", "2mg/day", "Orange Juice")
+
+## Display Results
+summary(odontoblastLengthModel)
+```
+
+All of the coefficients in the model are statistically significant. The model predicts that...
+
+* A guinea pig that receives 0.5mg/day of Vitamin C via ascorbic acid will have an odontoblast length of ~8.75 microns (the intercept).
+* A guinea pig that receives 0.5mg/day of Vitamin C via orange juice will have an odontoblast length of ~12.45 microns (intercept + orange juice).
+* A guinea pig that receives 1mg/day of Vitamin C via ascorbic acid will have an odontoblast length of 17.88 microns (intercept + 1mg/day).
+* A guinea pig that receives 2mg/day of Vitamin C via ascorbic acid will have an odontoblast length of ~24.24 microns (intercept + 2mg/day).
+* A guinea pig that receives 1mg/day of Vitamin C via orange juice will have an odontoblast length of 21.58 microns (intercept + 1mg/day + orange juice).
+* A guinea pig that receives 2mg/day of Vitamin C via orange juice will have an odontoblast length of 27.94 microns (intercept + 2mg/day + orange juice).
+
+## Assumptions
+
+In general, this analysis rests on the following assumptions:
+
+1. The sample is representative of the population (a big ask given the somewhat small sample size).
+2. The guinea pigs were randomly assigned to different dosage and delivery method combinations.
+3. The variances of the populations are different when performing t-tests.
+
+Assumptions for the linear regression:
+
+1. Linearity: The relationship between the dependent and independent variables is linear.
+2. Homoskedasticity: The variance of the residuals is constant.
+3. Independence: The variables are iid (identically and independently distributed).
+4. Normality: The residuals are normally distributed.
+5. The independent variables are not highly correlated.
+
+## Conclusion
+
+The regression model controls for other sources of variability in odontoblast length, whereas the t-test lumps all of that variability into the error term. In other words, the t-test suffers from omitted variable bias (not that the regression model doesn't, but it is still a more powerful model than the simple t-test).
+
+As a result, the regression model should be considered a better predictor of the significance of the independent variables than the simple t-test. So, we can conclude that both the daily dosage and the delivery method have a significant effect on odontoblast length.
+
