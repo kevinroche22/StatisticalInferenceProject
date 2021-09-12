@@ -189,6 +189,7 @@ ToothGrowth$dose <- as.factor(ToothGrowth$dose)
 Let's check out how the average tooth length varies by dosage.
 
 ```{r}
+## Average Odontoblast Length by Dosage
 ToothGrowth %>% ggplot(aes(x = dose, y = len)) +
         geom_boxplot(aes(fill = dose)) +
         ggtitle("Average Odontoblast Length by Dosage") +
@@ -201,6 +202,7 @@ As expected, guinea pigs that received a higher daily dosage of Vitamin C had lo
 Now, let's check out how the average tooth length varies by delivery method.
 
 ```{r}
+## Average Odontoblast Length by Delivery Method
 ToothGrowth %>% ggplot(aes(x = supp, y = len)) +
         geom_boxplot(aes(fill = supp)) +
         ggtitle("Average Odontoblast Length by Delivery Method") +
@@ -213,6 +215,7 @@ Here, we can see that guinea pigs that received their daily dosage through orang
 Finally, let's take a look at how the average tooth length varies by each delivery method and dosage combination.
 
 ```{r}
+## Average Odontoblast Length by Dosage across Delivery Methods
 ToothGrowth %>% ggplot(aes(x = dose, y = len)) +
         geom_boxplot(aes(fill = dose)) +
         ggtitle("Average Odontoblast Length by Dosage across Delivery Methods") +
